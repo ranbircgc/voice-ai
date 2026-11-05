@@ -21,10 +21,10 @@ BASE = Path(__file__).parent
 DATA = BASE / "data"
 DATA.mkdir(exist_ok=True)
 DB = DATA / "chat.db"
-OLLAMA_MODE = os.getenv("OLLAMA_MODE", "cloud").strip().lower()
+OLLAMA_MODE = os.getenv("OLLAMA_MODE", "local").strip().lower()
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
 OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "").strip()
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "kimi-k3.1-pro").strip()
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:8b").strip()
 OLLAMA_CLOUD_CHAT_URL = "https://ollama.com/api/chat"
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
 
