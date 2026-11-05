@@ -20,12 +20,33 @@ function App() {
   const bottomRef = useRef(null)
 
   useEffect(() => {
-    fetch('/api/health').then(r => r.json()).then(setHealth).catch(() => setHealth({ status: 'offline' }))
-    fetch('/api/voices').then(r => r.json()).then(d => setVoices(d.voices || ['default'])).catch(() => {})
-    fetch('/api/history').then(r => r.json()).then(d => setMessages(d.messages || [])).catch(() => {})
+    let cancelled = false
+
+    async function loadInitialData() {
+      const [healthResult, voicesResult, historyResult] = await Promise.allSettled([
+        fetch('/api/health').then(r => r.json()),
+        fetch('/api/voices').then(r => r.json()),
+        fetch('/api/history').then(r => r.json())
+      ])
+
+      if (cancelled) return
+
+      if (healthResult.status === 'fulfilled') setHealth(healthResult.value)
+      else setHealth({ status: 'offline', ollama_connected: false })
+
+      if (voicesResult.status === 'fulfilled') setVoices(voicesResult.value.voices || ['default'])
+      if (historyResult.status === 'fulfilled') setMessages(historyResult.value.messages || [])
+    }
+
+    loadInitialData()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
-  useEffect(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), [messages, busy])
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, busy])
 
   async function sendMessage(text = input) {
     const value = text.trim()
