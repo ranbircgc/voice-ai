@@ -174,12 +174,12 @@ function App() {
 
   return <div className="app-shell">
     <aside className="sidebar">
-      <div className="brand"><div className="brand-icon"><AudioLines size={22} /></div><div><b>SAARTHI</b><small>OLLAMA CLOUD AI</small></div></div>
+      <div className="brand"><div className="brand-icon"><AudioLines size={22} /></div><div><b>SAARTHI</b><small>LOCAL OLLAMA AI</small></div></div>
       <div className="side-label">YOUR ASSISTANT</div>
       <div className="side-active"><Bot size={17} /> New conversation</div>
-      <div className="side-note">Cloud-powered intelligence.<br />Speech and memory stay local.</div>
+      <div className="side-note">Local AI running on your Mac.<br />Speech and memory stay local.</div>
       <div className="sidebar-bottom">
-        <div className="status"><span className={health?.ollama_connected ? 'dot online' : 'dot'}></span>{health?.ollama_connected ? 'Ollama Cloud connected' : 'Ollama Cloud not connected'}</div>
+        <div className="status"><span className={health?.ollama_connected ? 'dot online' : 'dot'}></span>{health?.ollama_connected ? 'Local Ollama connected' : 'Local Ollama not connected'}</div>
         <button className="clear-btn" onClick={clearMemory}><Trash2 size={15} /> Clear memory</button>
       </div>
     </aside>
@@ -200,7 +200,7 @@ function App() {
           <div className="orb"><AudioLines size={38} /></div>
           <span className="eyebrow">READY WHEN YOU ARE</span>
           <h2>Namaste. What’s on<br />your mind today?</h2>
-          <p>Speak in Hindi, English, or Hinglish.<br />Powered by Ollama Cloud.</p>
+          <p>Speak in Hindi, English, or Hinglish.<br />Powered by local Ollama.</p>
           <div className="suggestions">
             {['Explain machine learning simply', 'Aaj ka din productive kaise banau?', 'Help me brainstorm an idea'].map(x => <button key={x} onClick={() => sendMessage(x)}>{x}</button>)}
           </div>
@@ -227,7 +227,7 @@ function App() {
             <button className="send-btn" title="Send message" onClick={() => sendMessage()} disabled={!input.trim() || busy}><Send size={17} /></button>
           </div>
         </div>
-        <div className="disclaimer"><Radio size={12} /> Ollama Cloud AI · Local speech recognition · Memory stored on this device</div>
+        <div className="disclaimer"><Radio size={12} /> Local Ollama AI · Local speech recognition · Memory stored on this device</div>
       </section>
       <audio ref={audioRef} />
     </main>
