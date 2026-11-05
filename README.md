@@ -1,14 +1,15 @@
 # Saarthi — Local Hindi / English / Hinglish Voice AI
 
-A local-first voice assistant for macOS, Windows and Linux. The LLM, speech recognition,
-speech synthesis and conversation memory run on your computer. Internet search uses
-DuckDuckGo's public HTML endpoint when you explicitly ask for current information.
+A voice assistant for macOS, Windows and Linux. AI responses use the high-capability
+Ollama Cloud model by default; speech recognition, speech synthesis and conversation
+memory run locally on your computer. Internet search uses DuckDuckGo's public HTML
+endpoint when you explicitly ask for current information.
 
 ## Features
 
 - Text chat and voice-note chat
 - Hindi, English and Hinglish prompts (model-dependent quality)
-- Local Ollama model for responses
+- Ollama Cloud model for responses (default: kimi-k3.1-pro)
 - Local Faster-Whisper speech-to-text
 - Local system TTS (macOS `say`; Windows/Linux via `pyttsx3`)
 - Multiple selectable system voices
@@ -28,16 +29,31 @@ True low-latency streaming barge-in needs a streaming STT/TTS stack and more int
 - Ollama: https://ollama.com
 - 8 GB RAM minimum; 16 GB recommended
 - Microphone permission for your browser
+- Ollama account and an API key for Cloud inference (usage may require an eligible plan or credits)
 
-## 1. Install Ollama and a model
+## 1. Configure Ollama Cloud
 
-Install Ollama, then run:
+Create an API key in your Ollama account, then copy the example environment file:
 
 ```bash
-ollama pull qwen2.5:3b
+cd backend
+cp .env.example .env
 ```
 
-If Ollama is already running as a desktop app, you do not need to run `ollama serve`.
+Open `backend/.env` and replace the placeholder with your real key:
+
+```env
+OLLAMA_MODE=cloud
+OLLAMA_API_KEY=your_real_ollama_api_key
+OLLAMA_MODEL=kimi-k3.1-pro
+```
+
+The key stays on your backend and must never be placed in frontend code or committed
+to GitHub. The default model is a high-capability cloud model; cloud usage may require
+an eligible Ollama plan or purchased usage credits. No model download is required.
+
+To use a different model, set `OLLAMA_MODEL` to a model name listed by Ollama's
+cloud model catalog. To switch back to local inference, set `OLLAMA_MODE=local`.
 
 ## 2. Start the backend
 
@@ -71,13 +87,8 @@ Open http://localhost:5173 and allow microphone access.
 
 ## Configuration
 
-Edit `backend/.env`:
-
-```env
-OLLAMA_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=qwen2.5:3b
-WHISPER_MODEL=base
-```
+Edit `backend/.env` to change the cloud model or speech-recognition size.
+Keep `OLLAMA_API_KEY` private.
 
 On macOS, list installed voices with `say -v '?'`. On Windows/Linux, `pyttsx3`
 uses voices installed on the operating system.
@@ -97,14 +108,16 @@ Cloudflare Pages settings:
 
 ## Troubleshooting
 
-- **Ollama connection error:** open Ollama and run `ollama list`.
-- **Model not found:** run `ollama pull qwen2.5:3b`.
+- **Ollama Cloud key missing:** add your key to `backend/.env`, then restart the backend.
+- **401 error:** create or copy a valid Ollama API key.
+- **402 error:** check your Ollama plan or add usage credits.
+- **Model not found:** verify the model name in Ollama's cloud catalog.
 - **Microphone blocked:** allow microphone access for localhost in browser settings and reload.
 - **Whisper install fails:** use Python 3.11 or 3.12 in a fresh virtual environment.
 - **No sound on macOS:** run `say "Hello"` in Terminal and check system output volume.
 
 ## Privacy
 
-Audio is uploaded only to your local FastAPI server for transcription. The local Ollama
-model and SQLite memory stay on your computer. If Web search is enabled, search terms
+Audio is uploaded only to your local FastAPI server for transcription. SQLite memory and speech processing stay on your computer. Chat prompts and responses
+are sent to Ollama Cloud for inference. If Web search is enabled, search terms
 are sent to DuckDuckGo. This is not a zero-network application when web search is used.
