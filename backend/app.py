@@ -21,8 +21,11 @@ BASE = Path(__file__).parent
 DATA = BASE / "data"
 DATA.mkdir(exist_ok=True)
 DB = DATA / "chat.db"
+OLLAMA_MODE = os.getenv("OLLAMA_MODE", "cloud").strip().lower()
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
+OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "").strip()
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "kimi-k3.1-pro").strip()
+OLLAMA_CLOUD_CHAT_URL = "https://ollama.com/api/chat"
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
 
 app = FastAPI(title="Saarthi Local Voice AI")
@@ -108,14 +111,29 @@ def search_web(query: str):
         return [{"title": "Search unavailable", "url": "", "snippet": str(exc)}]
 
 
+def ollama_headers():
+    if OLLAMA_MODE == "cloud":
+        if not OLLAMA_API_KEY:
+            raise HTTPException(503, "Add your OLLAMA_API_KEY to backend/.env to use Ollama Cloud.")
+        return {"Authorization": f"Bearer {OLLAMA_API_KEY}"}
+    return {}
+
+
 @app.get("/api/health")
 def health():
+    if OLLAMA_MODE == "cloud" and not OLLAMA_API_KEY:
+        return {"status": "needs_setup", "ollama_connected": False, "mode": "cloud",
+                "model": OLLAMA_MODEL, "message": "Add OLLAMA_API_KEY to backend/.env"}
     try:
-        response = requests.get(f"{OLLAMA_URL}/api/tags", timeout=2)
+        if OLLAMA_MODE == "cloud":
+            response = requests.get("https://ollama.com/api/tags", headers=ollama_headers(), timeout=12)
+        else:
+            response = requests.get(f"{OLLAMA_URL}/api/tags", timeout=3)
         ollama_ok = response.ok
     except Exception:
         ollama_ok = False
-    return {"status": "ok", "ollama_connected": ollama_ok, "model": OLLAMA_MODEL}
+    return {"status": "ok" if ollama_ok else "offline", "ollama_connected": ollama_ok,
+            "mode": OLLAMA_MODE, "model": OLLAMA_MODEL}
 
 
 @app.get("/api/voices")
@@ -157,17 +175,36 @@ def chat(req: ChatRequest):
         )
     messages.append({"role": "user", "content": user_content})
     try:
+        if OLLAMA_MODE == "cloud":
+            if not OLLAMA_API_KEY:
+                raise HTTPException(503, "Add your OLLAMA_API_KEY to backend/.env to use Ollama Cloud.")
+            chat_url = OLLAMA_CLOUD_CHAT_URL
+            headers = {**ollama_headers(), "Content-Type": "application/json"}
+            timeout = 300
+        else:
+            chat_url = f"{OLLAMA_URL}/api/chat"
+            headers = {"Content-Type": "application/json"}
+            timeout = 180
         response = requests.post(
-            f"{OLLAMA_URL}/api/chat",
+            chat_url,
+            headers=headers,
             json={"model": OLLAMA_MODEL, "messages": messages, "stream": False},
-            timeout=180,
+            timeout=timeout,
         )
+        if response.status_code == 401:
+            raise HTTPException(401, "Ollama Cloud rejected the API key. Check OLLAMA_API_KEY in backend/.env.")
+        if response.status_code == 402:
+            raise HTTPException(402, "This Ollama Cloud model requires an eligible plan or usage credits.")
+        if response.status_code == 404:
+            raise HTTPException(404, f"Model '{OLLAMA_MODEL}' was not found. Check the model name in backend/.env.")
         response.raise_for_status()
         answer = response.json()["message"]["content"].strip()
+    except HTTPException:
+        raise
     except requests.exceptions.ConnectionError:
-        raise HTTPException(503, "Ollama is not running. Start Ollama and pull the configured model.")
+        raise HTTPException(503, "Could not connect to Ollama. Check your internet connection.")
     except requests.exceptions.Timeout:
-        raise HTTPException(504, "The local model took too long. Try a smaller model.")
+        raise HTTPException(504, "Ollama Cloud took too long to respond. Please retry.")
     except Exception as exc:
         raise HTTPException(502, f"Model error: {exc}")
     save("user", message)
